@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { Player } from '../types';
-import { CLASSES } from '../constants';
+import { BUFF_ICONS } from '../constants';
 
 interface PlayerAreaProps {
   player: Player;
@@ -8,11 +9,11 @@ interface PlayerAreaProps {
   showMove: boolean;
   isTarget?: boolean;
   onClick?: () => void;
+  verticalAlign?: 'top' | 'bottom';
 }
 
-const PlayerArea: React.FC<PlayerAreaProps> = ({ player, isCurrentPlayer, showMove, isTarget, onClick }) => {
+const PlayerArea: React.FC<PlayerAreaProps> = ({ player, isCurrentPlayer, showMove, isTarget, onClick, verticalAlign = 'bottom' }) => {
   const isDead = !player.isAlive;
-  const playerClass = CLASSES[player.classType];
   
   // Calculate Widths for Bars
   const hpPercent = Math.max(0, (player.hp / player.maxHp) * 100);
@@ -27,11 +28,9 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({ player, isCurrentPlayer, showMo
       borderColor = 'border-rose-800/80';
   }
 
-  // VFX Logic: Determine what overlay effects to show based on state
+  // VFX Logic
   let vfxElement = null;
-  
   if (showMove && player.lastMove) {
-      // 1. Action User Effects (e.g., Aura for charging)
       if (player.lastMove.type === 'CHARGE' || player.lastMove.type === 'SACRIFICE') {
           vfxElement = (
               <div className="absolute inset-0 -m-4 rounded-full border-4 border-cyan-400 opacity-0 animate-aura pointer-events-none z-0"></div>
@@ -44,7 +43,6 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({ player, isCurrentPlayer, showMo
       }
   }
 
-  // 2. Reaction/Impact Effects (When taking damage or healing)
   let damageEffect = null;
   if (player.damageTakenThisRound > 0) {
       damageEffect = (
@@ -72,8 +70,6 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({ player, isCurrentPlayer, showMo
     moveDisplay = <span className="text-slate-500 font-bold tracking-widest uppercase text-[10px]">DEAD</span>;
   } else if (showMove && player.lastMove) {
     const m = player.lastMove;
-    
-    // Move Badge
     let badgeColor = 'bg-slate-700';
     if (m.type === 'ATTACK') badgeColor = m.variant === 'ADVANCED' ? 'bg-rose-600' : 'bg-rose-800';
     if (m.type === 'DEFEND') badgeColor = m.variant === 'ADVANCED' ? 'bg-emerald-500' : 'bg-emerald-700';
@@ -96,19 +92,24 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({ player, isCurrentPlayer, showMo
     moveDisplay = <div className="flex gap-1"><div className="w-1 h-1 bg-slate-500 rounded-full animate-bounce"/></div>;
   }
 
+  // Floating text positioning based on verticalAlign
+  // If player is at TOP, float DOWN (mt-2). If bottom, float UP (mb-2).
+  const floatingTextClass = verticalAlign === 'top' 
+      ? 'top-full mt-4' 
+      : 'bottom-full mb-4';
+
   return (
     <div 
       onClick={onClick}
       className={`
-        relative flex flex-col items-center p-1.5 md:p-2 rounded-xl border-2 transition-all duration-300 select-none 
-        min-w-[4.5rem] w-20 sm:w-24 md:w-32 lg:w-36 flex-shrink
+        relative flex flex-col items-center p-2 rounded-xl border-2 transition-all duration-300 select-none 
+        min-w-[5rem] w-24 sm:w-28 md:w-36 flex-shrink
         ${isDead ? 'bg-slate-900/40 opacity-50 grayscale scale-95' : 'bg-slate-800/90'}
         ${borderColor}
         ${isTarget ? 'ring-4 ring-yellow-400 ring-offset-2 ring-offset-slate-900 scale-105 cursor-pointer z-30 shadow-[0_0_30px_rgba(250,204,21,0.4)]' : ''}
         ${player.damageTakenThisRound > 0 ? 'animate-shake' : ''}
       `}
     >
-      {/* Visual Effects Layer */}
       {vfxElement}
       {damageEffect}
       {healEffect}
@@ -123,81 +124,84 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({ player, isCurrentPlayer, showMo
           </div>
       )}
 
-      {/* Floating Status Badge */}
-      <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-40 h-6 flex items-end">
+      {/* Floating Status Badge - Always opposite to vertical align or centered above */}
+      <div className={`absolute left-1/2 -translate-x-1/2 z-40 h-6 flex items-end ${verticalAlign === 'top' ? '-bottom-4' : '-top-3'}`}>
         {moveDisplay}
       </div>
 
-      {/* Avatar */}
-      <div className="relative mb-1 mt-1">
-         <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-14 md:h-14 rounded-full bg-slate-900 border border-slate-600 flex items-center justify-center text-lg sm:text-xl md:text-2xl shadow-inner overflow-hidden">
+      {/* Avatar Section */}
+      <div className="relative mb-2 mt-1">
+         <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full bg-slate-900 border border-slate-600 flex items-center justify-center text-xl sm:text-2xl md:text-3xl shadow-inner overflow-hidden">
             {player.classType === 'GUARDIAN' && '🛡️'}
             {player.classType === 'STRIKER' && '⚔️'}
             {player.classType === 'CHANNELER' && '🔮'}
+            {player.classType === 'BERSERKER' && '🪓'}
+            {player.classType === 'BOSS' && '👹'}
          </div>
-         {/* Team Indicator Badge */}
-         <div className={`absolute -top-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 rounded-full flex items-center justify-center text-[7px] sm:text-[9px] font-bold text-white border border-slate-900 ${player.team === 'A' ? 'bg-blue-500' : (player.team === 'B' ? 'bg-rose-600' : 'hidden')}`}>
+         <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white border border-slate-900 ${player.team === 'A' ? 'bg-blue-500' : (player.team === 'B' ? 'bg-rose-600' : 'hidden')}`}>
              {player.team === 'A' ? 'A' : 'B'}
          </div>
          
-         {/* Combat Floaters */}
+         {/* Combat Text Floaters - Positioned to avoid obstruction */}
          {player.damageTakenThisRound > 0 && (
-          <div className="absolute top-0 right-0 -translate-y-full text-rose-500 font-black text-lg md:text-xl animate-[bounce_0.5s_infinite] drop-shadow-md z-50">
+          <div className={`absolute ${floatingTextClass} left-1/2 -translate-x-1/2 text-rose-500 font-black text-xl md:text-2xl animate-[bounce_0.5s_infinite] drop-shadow-md z-50 whitespace-nowrap pointer-events-none`}>
             -{player.damageTakenThisRound}
           </div>
         )}
         {player.hpRecoveredThisRound && player.hpRecoveredThisRound > 0 && (
-          <div className="absolute top-0 right-0 -translate-y-full text-green-400 font-black text-lg md:text-xl animate-[bounce_0.5s_infinite] drop-shadow-md z-50">
+          <div className={`absolute ${floatingTextClass} left-1/2 -translate-x-1/2 text-green-400 font-black text-xl md:text-2xl animate-[bounce_0.5s_infinite] drop-shadow-md z-50 whitespace-nowrap pointer-events-none`}>
             +{player.hpRecoveredThisRound}
           </div>
         )}
       </div>
 
-      {/* Name */}
-      <div className="font-bold text-[9px] sm:text-[10px] md:text-xs text-slate-300 mb-1 truncate max-w-full">
-        {isCurrentPlayer ? 'YOU' : player.name}
+      {/* Name & Buffs */}
+      <div className="w-full flex flex-col items-center mb-1">
+          <div className="font-bold text-[10px] sm:text-xs text-slate-300 truncate max-w-full">
+            {isCurrentPlayer ? 'YOU' : player.name}
+          </div>
+          {/* Buff Icons */}
+          {player.buffs && player.buffs.length > 0 && (
+              <div className="flex gap-0.5 mt-0.5 flex-wrap justify-center">
+                  {player.buffs.map((buffId, i) => (
+                      <span key={i} className="text-[10px] cursor-help" title={buffId}>{BUFF_ICONS[buffId] || '✨'}</span>
+                  ))}
+              </div>
+          )}
       </div>
 
-      {/* Bars Container */}
-      <div className="w-full space-y-1 bg-slate-950/50 p-1 rounded-lg border border-slate-800">
+      {/* Detailed Status Bars */}
+      <div className="w-full space-y-1 bg-slate-950/80 p-1.5 rounded-lg border border-slate-800 shadow-inner">
          
-         {/* HP */}
-         <div className="w-full">
-            <div className="h-1.5 sm:h-2 w-full bg-slate-900 rounded-sm overflow-hidden relative">
-               <div 
-                  className="h-full bg-gradient-to-r from-rose-600 to-rose-500 transition-all duration-500"
-                  style={{ width: `${hpPercent}%` }}
-               />
-               <div className="absolute inset-0 flex">
-                  {Array(player.maxHp - 1).fill(0).map((_, i) => (
-                    <div key={i} className="flex-1 border-r border-slate-900/50"></div>
-                  ))}
-               </div>
-            </div>
+         {/* HP Bar */}
+         <div className="w-full relative h-3 sm:h-4 bg-slate-900 rounded border border-slate-700/50 overflow-hidden">
+             <div 
+                className="h-full bg-gradient-to-r from-rose-700 to-rose-500 transition-all duration-500"
+                style={{ width: `${hpPercent}%` }}
+             />
+             <div className="absolute inset-0 flex items-center justify-center text-[8px] sm:text-[9px] font-bold text-white drop-shadow-md leading-none">
+                 {player.hp} / {player.maxHp}
+             </div>
          </div>
 
-         {/* Shield (If active) */}
+         {/* Energy Bar */}
+         <div className="w-full relative h-3 sm:h-4 bg-slate-900 rounded border border-slate-700/50 overflow-hidden mt-1">
+             <div 
+                className="h-full bg-gradient-to-r from-cyan-700 to-cyan-500 transition-all duration-300"
+                style={{ width: `${energyPercent}%` }}
+             />
+             <div className="absolute inset-0 flex items-center justify-center text-[8px] sm:text-[9px] font-bold text-white drop-shadow-md leading-none">
+                 {player.energy} EP
+             </div>
+         </div>
+
+         {/* Shield Indicator */}
          {player.shield > 0 && (
-             <div className="flex items-center gap-0.5 justify-center bg-slate-700/50 rounded px-1 py-0.5 mt-0.5">
-                 <span className="text-[7px]">🛡️</span>
-                 <div className="flex gap-0.5">
-                    {Array(player.shield).fill(0).map((_,i) => (
-                        <div key={i} className="w-1 h-1 bg-slate-300 rounded-full"></div>
-                    ))}
-                 </div>
+             <div className="flex items-center gap-1 justify-center bg-amber-900/50 rounded px-1 py-0.5 mt-1 border border-amber-600/50">
+                 <span className="text-[9px]">🛡️</span>
+                 <span className="text-[9px] font-bold text-amber-200">{player.shield}</span>
              </div>
          )}
-
-         {/* Energy */}
-         <div className="w-full mt-1">
-            <div className="h-1 sm:h-1.5 w-full bg-slate-900 rounded-sm overflow-hidden">
-               <div 
-                  className="h-full bg-gradient-to-r from-cyan-600 to-cyan-400 transition-all duration-300"
-                  style={{ width: `${energyPercent}%` }}
-               />
-            </div>
-            <div className="text-[7px] sm:text-[8px] text-cyan-500 text-center leading-none mt-0.5">{player.energy} EP</div>
-         </div>
 
       </div>
     </div>
